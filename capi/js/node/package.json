@@ -5,14 +5,21 @@
   "bugs": {
     "url": "https://github.com/LiveSplit/livesplit-core/issues"
   },
-  "dependencies": {},
+  "dependencies": {
+    "ffi-napi": "git+https://github.com/VodBox/node-ffi-napi.git",
+    "ref-napi": "git+https://github.com/VodBox/ref-napi.git"
+  },
   "description": "livesplit-core is a library that provides a lot of functionality for creating a speedrun timer.",
-  "devDependencies": {},
+  "devDependencies": {
+    "@types/ffi-napi": "^4.0.7",
+    "@types/ref-napi": "^3.0.6",
+    "typescript": "^4.9.4"
+  },
   "files": [
     "README.md",
-    "index.js",
     "livesplit_core.js",
-    "index.d.ts"
+    "livesplit_core.d.ts",
+    "livesplit_core.dylib"
   ],
   "homepage": "https://github.com/LiveSplit/livesplit-core#readme",
   "keywords": [
@@ -21,7 +28,7 @@
     "livesplit"
   ],
   "license": "MIT",
-  "main": "index.js",
+  "main": "livesplit_core.js",
   "maintainers": [
     {
       "name": "cryze92",
@@ -35,5 +42,5 @@
     "url": "git+https://github.com/LiveSplit/livesplit-core.git"
   },
   "scripts": {},
-  "version": "0.10.2"
+  "version": "0.13.0"
 }

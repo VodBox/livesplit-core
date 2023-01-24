@@ -23,7 +23,7 @@ fn get_hl_type_without_null(ty: &Type) -> String {
     } else {
         match (ty.kind, ty.name.as_str()) {
             (TypeKind::Ref, "c_char") => "string",
-            (TypeKind::Ref, _) | (TypeKind::RefMut, _) => "Buffer",
+            (TypeKind::Ref, _) | (TypeKind::RefMut, _) => "ref.Pointer<unknown>",
             (_, t) if !ty.is_custom => match t {
                 "i8" => "number",
                 "i16" => "number",
@@ -287,8 +287,13 @@ fn write_fn<W: Write>(mut writer: W, function: &Function, type_script: bool) -> 
             write!(
                 writer,
                 r#"
-        return result;"#
-            )?;
+                return result"#)?;
+
+            if type_script && has_return_type {
+                write!(writer, " as {}", return_type_with_null)?;
+            }
+
+            write!(writer, r#";"#)?;
         }
     }
 
@@ -311,13 +316,14 @@ pub fn write<W: Write>(
             writer,
             r#""use strict";
 // tslint:disable
-import ffi = require('ffi');
+import ffi = require('ffi-napi');
 import fs = require('fs');
-import ref = require('ref');
+import ref = require('ref-napi');
+import path = require('path');
 
 {}
 
-const liveSplitCoreNative = ffi.Library('livesplit_core', {{"#,
+const liveSplitCoreNative = ffi.Library(path.resolve(__dirname, 'livesplit_core'), {{"#,
             typescript::HEADER
         )?;
     } else {
@@ -325,11 +331,12 @@ const liveSplitCoreNative = ffi.Library('livesplit_core', {{"#,
             writer,
             "{}",
             r#""use strict";
-const ffi = require('ffi');
+const ffi = require('ffi-napi');
 const fs = require('fs');
-const ref = require('ref');
+const ref = require('ref-napi');
+const path = require('path');
 
-const liveSplitCoreNative = ffi.Library('livesplit_core', {"#
+const liveSplitCoreNative = ffi.Library(path.resolve(__dirname, 'livesplit_core'), {"#
         )?;
     }
 
@@ -385,7 +392,7 @@ const liveSplitCoreNative = ffi.Library('livesplit_core', {"#
             write!(
                 writer,
                 r#"
-    ptr: Buffer;"#
+    ptr: ref.Pointer<unknown>;"#
             )?;
         }
 
@@ -439,14 +446,14 @@ const liveSplitCoreNative = ffi.Library('livesplit_core', {"#
             write!(
                 writer,
                 r#"
-    constructor(ptr: Buffer) {{"#
+    constructor(ptr: ref.Pointer<unknown>) {{"#
             )?;
         } else {
             write!(
                 writer,
                 r#"
     /**
-     * @param {{Buffer}} ptr
+     * @param {{ref.Pointer<unknown>}} ptr
      */
     constructor(ptr) {{"#
             )?;
@@ -495,14 +502,14 @@ const liveSplitCoreNative = ffi.Library('livesplit_core', {"#
         if (data.byteLength !== data.buffer.byteLength) {
             buf = buf.slice(data.byteOffset, data.byteOffset + data.byteLength);
         }
-        this.setGameIcon(buf, buf.byteLength);
+        this.setGameIcon(buf as ref.Pointer<unknown>, buf.byteLength);
     }
     activeSetIconFromArray(data: Int8Array) {
         let buf = Buffer.from(data.buffer);
         if (data.byteLength !== data.buffer.byteLength) {
             buf = buf.slice(data.byteOffset, data.byteOffset + data.byteLength);
         }
-        this.activeSetIconFromArray(buf, buf.byteLength);
+        this.activeSetIcon(buf as ref.Pointer<unknown>, buf.byteLength);
     }"#
                 )?;
             } else {
@@ -528,7 +535,7 @@ const liveSplitCoreNative = ffi.Library('livesplit_core', {"#
         if (data.byteLength !== data.buffer.byteLength) {
             buf = buf.slice(data.byteOffset, data.byteOffset + data.byteLength);
         }
-        this.activeSetIconFromArray(buf, buf.byteLength);
+        this.activeSetIcon(buf, buf.byteLength);
     }"#
                 )?;
             }
@@ -626,15 +633,15 @@ const liveSplitCoreNative = ffi.Library('livesplit_core', {"#
         if (data.byteLength !== data.buffer.byteLength) {
             buf = buf.slice(data.byteOffset, data.byteOffset + data.byteLength);
         }
-        return Run.parse(buf, buf.byteLength, loadFilesPath);
+        return Run.parse(buf as ref.Pointer<unknown>, buf.byteLength, loadFilesPath);
     }
     static parseFile(file: any, loadFilesPath: string): ParseRunResult {
         const data = fs.readFileSync(file);
-        return Run.parse(data, data.byteLength, loadFilesPath);
+        return Run.parse(data as ref.Pointer<unknown>, data.byteLength, loadFilesPath);
     }
     static parseString(text: string, loadFilesPath: string): ParseRunResult {
         const data = new Buffer(text);
-        return Run.parse(data, data.byteLength, loadFilesPath);
+        return Run.parse(data as ref.Pointer<unknown>, data.byteLength, loadFilesPath);
     }"#
                 )?;
             } else {
@@ -685,11 +692,11 @@ const liveSplitCoreNative = ffi.Library('livesplit_core', {"#
         if (data.byteLength !== data.buffer.byteLength) {
             buf = buf.slice(data.byteOffset, data.byteOffset + data.byteLength);
         }
-        return Layout.parseOriginalLivesplit(buf, buf.byteLength);
+        return Layout.parseOriginalLivesplit(buf as ref.Pointer<unknown>, buf.byteLength);
     }
     static parseOriginalLivesplitString(text: string): Layout | null {
         const data = new Buffer(text);
-        return Layout.parseOriginalLivesplit(data, data.byteLength);
+        return Layout.parseOriginalLivesplit(data as ref.Pointer<unknown>, data.byteLength);
     }"#
                 )?;
             } else {
